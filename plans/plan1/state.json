@@ -1,0 +1,17 @@
+{
+    "to_destroy": {
+        "71b1fb28-a0df-8241-862b-1e2611cf9389": {
+            "state": {
+                "vpc_id": "dry_vpc"
+            },
+            "inputs": {
+                "cidr_block": "10.212.160.0/22"
+            },
+            "class": "pdep.aws.network.Vpc",
+            "path": "$.main_vpc",
+            "uuid": "71b1fb28-a0df-8241-862b-1e2611cf9389",
+            "plan": "__main__.BackboneNet",
+            "plan_uuid": "a81054b2-bb57-4969-b3c5-308fee049e01"
+        }
+    }
+}
