@@ -1,9 +1,11 @@
+import inspect
 from dataclasses import dataclass
 from functools import wraps
 
 from dataclasses_json import dataclass_json
 from typing import TypeVar, Generic, get_args
-
+self.__class__.__bases__[0].__bases__[0].__bases__[0]
+self.__class__.__bases__[0].__bases__
 
 class LazyProperty:
     def __init__(self, obj, func):
@@ -53,11 +55,15 @@ class A:
         return self.__p
 
 
-a = A()
-print("-----1")
-c = a.prop
-print("-----2")
-value = str(c)
-print("-----3")
-print(f"c={value}")
-print("-----4")
+def print_caller():
+    print(type(inspect.stack()[1].function))
+
+class Foo:
+    def hello(self, amir):
+        print(amir)
+        print_caller()
+
+
+f = Foo()
+
+f.hello("hello")
