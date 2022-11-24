@@ -1,37 +1,51 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict
+
 from dataclasses_json import dataclass_json
 from uuid import UUID
-from pdep import Connector, resource, BasePlan, FileResourceManager, zstr, AwsLocalStackProvider
-from pdep.aws.network import Vpc, RouteTable, VpcInputV2, VpcV2
+from pdep import BasePlan, FileResourceManager, zstr, AwsLocalStackProvider
+from pdep.aws.network import VpcV1, RouteTable, VpcInput, Vpc, RouteTableInput
 from pdep.utils import setup_logging, log_func
 
 
 @dataclass_json
 @dataclass
-class BackboneNetState:
+class BackboneNetInput:
     cidr_block: zstr = None
+    tags: Dict[str, str] = field(default_factory=dict)
 
 
-@resource()
-class BackboneNet(BasePlan):
+@dataclass_json
+@dataclass
+class BackboneNetOutput:
+    vpc_id: zstr = None
 
-    def __init__(self, logger, cidr_block: str | Connector, tags={}):
-        super().__init__(logger, UUID('a81054b2-bb57-4969-b3c5-308fee049e01'))
 
-        self.resources.main_vpc = VpcV2(
-            logger,
-            input=VpcInputV2(
-                cidr_block=cidr_block,
-                tags=tags
+class BackboneNet(BasePlan[BackboneNetInput, BackboneNetOutput]):
+
+    def do_init_resources(self):
+        self.resources.main_vpc = Vpc(
+            input=VpcInput(
+                cidr_block=self.input.cidr_block,
+                tags=self.input.tags
             )
         )
-        self.resources.main_rt = RouteTable(logger, vpc_id=self.resources.main_vpc.output.vpc_id)
+        self.resources.main_rt = RouteTable(
+            RouteTableInput(
+                vpc_id=self.resources.main_vpc.output.vpc_id
+            )
+        )
 
 
 if __name__ == "__main__":
     setup_logging(console_level=log_func.ABOVE_DEBUG)
-    rm = FileResourceManager(None, "state.json")
+    rm = FileResourceManager("state.json")
     provider = AwsLocalStackProvider(None)
-    bb = BackboneNet(None, cidr_block="10.212.160.0/22", tags={"hello": "amir"})
-    bb.apply(rm, provider, False)
+    bb = BackboneNet(
+        BackboneNetInput(
+            cidr_block="10.212.160.0/22",
+            tags={"hello": "amir"}
+        ), UUID('a81054b2-bb57-4969-b3c5-308fee049e01')
+    )
+    bb.apply(rm, provider, False, True)

@@ -61,6 +61,14 @@ typing-inspect = ">=0.4.0"
 dev = ["flake8", "hypothesis", "ipython", "mypy (>=0.710)", "portray", "pytest (>=6.2.3)", "simplejson", "types-dataclasses"]
 
 [[package]]
+name = "ipcalc"
+version = "1.99.0"
+description = "IP subnet calculator"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "jmespath"
 version = "1.0.1"
 description = "JSON Matching Expressions"
@@ -245,7 +253,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "b0870bdd8f93b581f194b5d32da04cad8d1a28fc2d243cb7eb00a8171e86d111"
+content-hash = "b16f26c4bb245d3d26b3d84bebfa99f3f5271f9f4d770b02080175f045684478"
 
 [metadata.files]
 awscli-local = [
@@ -262,6 +270,9 @@ botocore = [
 dataclasses-json = [
     {file = "dataclasses-json-0.5.7.tar.gz", hash = "sha256:c2c11bc8214fbf709ffc369d11446ff6945254a7f09128154a7620613d8fda90"},
     {file = "dataclasses_json-0.5.7-py3-none-any.whl", hash = "sha256:bc285b5f892094c3a53d558858a88553dd6a61a11ab1a8128a0e554385dcc5dd"},
+]
+ipcalc = [
+    {file = "ipcalc-1.99.0.tar.gz", hash = "sha256:17b9d85859ef70e1996426a723d3891f6b99dd0e283986ea92c37a06601725d9"},
 ]
 jmespath = [
     {file = "jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980"},

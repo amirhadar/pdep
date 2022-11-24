@@ -17,8 +17,13 @@ def check_interface(cls: Type, inter: Type, throw=False):
         if inspect.isroutine(attr):
             if not hasattr(cls, name):
                 raise NotComplient(f"Method '{name}' not implemented")
+
+            cls_attr = getattr(cls, name)
+            if cls_attr.__qualname__.split('.')[0] == inter.__name__:
+                raise NotComplient(f"Method '{name}' not implemented")
+
             sig_inter = inspect.signature(attr)
-            sig_cls = inspect.signature(getattr(cls, name))
+            sig_cls = inspect.signature(cls_attr)
             if sig_inter != sig_cls:
                 throw_not_complient(f"Method '{name}' signature issue. interface:{sig_inter} obj:{sig_cls}")
                 return False
@@ -68,6 +73,6 @@ class Base:
 
 
 @implements(Inter)
-class MyClass(Base):
+class MyClass(Base, Inter):
     def func2(self, j: int) -> str:
         pass

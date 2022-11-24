@@ -1,10 +1,12 @@
+import time
+import copy
 import dataclasses
 import functools
 import importlib
 import inspect
 import logging
 from pathlib import Path
-from typing import List, Any
+
 
 
 class DynamicDataContainer:
@@ -164,17 +166,22 @@ def convert_list_values(l, conv_func):
 def convert_dataclass_values(dc, conv_func):
     for field in dc.__dataclass_fields__:
         value = getattr(dc, field)
-        setattr(dc, field, convert_somthing_values(value,conv_func))
+        setattr(dc, field, convert_something_values(value, conv_func))
     return dc
 
-def convert_somthing_values(something, conv_func):
+
+def convert_something_values(something, conv_func):
     if dataclasses.is_dataclass(something):
         new_something = convert_dataclass_values(something, conv_func)
     elif type(something) == list:
         new_something = convert_list_values(something, conv_func)
+    elif type(something) == dict:
+        new_something = convert_dict_values(something, conv_func)
     else:
         new_something = conv_func(something)
     return new_something
+
+
 def load_class_from_str(cls_full_name):
     mod_name, cls_name = cls_full_name.rsplit('.', 1)
     mod = importlib.import_module(mod_name)
@@ -186,7 +193,7 @@ def setup_logging(log_path=".", component_name="pdep", console_level=logging.INF
     log_path = Path(log_path)
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
-    format_str = "%(asctime).19s [%(levelname)8s][%(threadName)12s][{component:12s}][%(name)45s][%(funcName)25s]: %(message)s".format(
+    format_str = "%(asctime).19s [%(levelname)8s][%(threadName)12s][{component:12s}][%(name)55s][%(funcName)25s]: %(message)s".format(
         component=component_name
     )
     log_formatter = logging.Formatter(format_str)
@@ -202,3 +209,36 @@ def setup_logging(log_path=".", component_name="pdep", console_level=logging.INF
     console_handler.setFormatter(log_formatter)
     console_handler.setLevel(console_level)
     root_logger.addHandler(console_handler)
+
+
+def _aws_tags_to_dict(aws_tags):
+    tags = {}
+    for pair in aws_tags:
+        tags[pair['Key']] = pair['Value']
+    return tags
+
+
+def _dict_to_aws_tags(d, additional={}):
+    d = copy.deepcopy(d)
+    d.update(additional)
+    tags = [
+        {
+            'Key': key,
+            'Value': str(value)
+        }
+        for key, value in d.items()
+    ]
+    return tags
+
+
+def unused(*args):
+    for arg in args:
+        del arg
+
+
+def do_with_timeout(predicate, timeout, sleep=5):
+    start_t = time.time()
+    while predicate():
+        if time.time() - start_t > timeout:
+            raise Exception(f"timeout")
+        time.sleep(sleep)

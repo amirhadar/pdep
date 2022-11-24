@@ -16,9 +16,10 @@ import boto3
 from dataclasses_json import dataclass_json
 
 from pdep.inter import implements
-from pdep.utils import DynamicDataContainer, dict_to_class, log_func, load_class_from_str, convert_somthing_values
+from pdep.utils import DynamicDataContainer, dict_to_class, log_func, load_class_from_str, convert_something_values, \
+    unused
 
-zstr = Union[str, None]
+zstr = Union[str, None, Any]
 
 
 class ResourceManager:
@@ -40,9 +41,9 @@ class ResourceManager:
 
 
 @implements(ResourceManager)
-class FileResourceManager:
+class FileResourceManager(ResourceManager):
 
-    def __init__(self, logger, path: str | Path):
+    def __init__(self, path: str | Path, logger=None):
         self.__logger = logger if logger else logging.getLogger(self.full_name)
         self.__path = Path(path)
         self.__state = {"to_destroy": []}
@@ -85,6 +86,7 @@ class FileResourceManager:
             fp.close()
 
     def mark_destroy(self, uuid: UUID | str, state: dict) -> None:
+        unused(uuid)
         self.__state["to_destroy"].append(state)
         with self.__path.open('w') as fp:
             json.dump(self.__state, fp, indent=4)
@@ -121,7 +123,7 @@ class FileResourceManager:
 
 
 class AwsLocalStackProvider:
-    def __init__(self, logger):
+    def __init__(self, logger=None):
         self.__logger = logger if logger else logging.getLogger(self.full_name)
         self.__session = boto3.Session(
             aws_access_key_id="test",
@@ -188,12 +190,11 @@ class Connector:
         self.__resolved = False
 
     @property
-    def root_obj(self):
-        return self.__obj if not isinstance(self.__obj, Connector) else self.__obj.root_obj
-
-    @property
-    def obj(self):
-        return self.__obj
+    def root_objs(self):
+        objs = [self.__obj]
+        if isinstance(self.__obj, Connector):
+            objs = self.__obj.root_objs
+        return objs
 
     @property
     def value(self) -> Any:
@@ -203,21 +204,89 @@ class Connector:
         self.resolve()
         return self.__value
 
-    def __conv_func(self, value):
-        if isinstance(value, Connector):
-            return value.value
-        return value
-
     def resolve(self):
+        def visitor(value):
+            if isinstance(value, Connector):
+                return value.value
+            return value
+
         if not self.__resolved:
             self.__value = self.__func[0](self.__obj)
             if self.__attr:
                 self.__value = getattr(self.__value, self.__attr)
-            self.__value = convert_somthing_values(self.__value, self.__conv_func)
+            self.__value = convert_something_values(self.__value, visitor)
             self.__resolved = True
 
     def __getattr__(self, name):
-        if name.startswith("_") or name in ['resolve', 'value', 'obj', 'get_value']:
+        if name.startswith("_") or name in ['resolve', 'value', 'root_objs', 'get_value']:
+            return self.__getattribute__(name)
+        return Connector(self, Connector.get_value, name)
+
+
+class CalcConnector(Connector):
+    def __init__(self, *args, **kwargs):
+        super().__init__(None, None)
+        self.__args = args
+
+        self.__func = [self.calc]
+        if 'func' in kwargs:
+            self.__func = [kwargs['func']]
+
+        self.__kwargs = kwargs
+        self.__root_objs = []
+        self.__value = None
+        self.__resolved = False
+        for arg in self.__args:
+            if isinstance(arg, Connector):
+                self.__root_objs += arg.root_objs
+        for key, arg in self.__kwargs.items():
+            if isinstance(arg, Connector):
+                self.__root_objs += arg.root_objs
+
+    @property
+    def root_objs(self):
+        return self.__root_objs
+
+    @property
+    def value(self) -> Any:
+        return self.get_value()
+
+    def get_value(self) -> Any:
+        self.resolve()
+        return self.__value
+
+    def resolve(self):
+        def visitor(value):
+            if isinstance(value, Connector):
+                return value.value
+            return value
+
+        if not self.__resolved:
+            args = []
+            for arg in self.__args:
+                if isinstance(arg, Connector):
+                    value = convert_something_values(arg.value, visitor)
+                    args.append(value)
+                else:
+                    args.append(arg)
+
+            kwargs = {}
+            for key, arg in self.__kwargs.items():
+                if isinstance(arg, Connector):
+                    value = convert_something_values(arg.value, visitor)
+                    kwargs[key] = value
+                else:
+                    kwargs[key] = arg
+
+            self.__value = self.__func[0](*args, **kwargs)
+            self.__value = convert_something_values(self.__value, visitor)
+            self.__resolved = True
+
+    def calc(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, name):
+        if name.startswith("_") or name in ['resolve', 'value', 'calc', 'root_objs', 'get_value']:
             return self.__getattribute__(name)
         return Connector(self, Connector.get_value, name)
 
@@ -234,7 +303,6 @@ def plan_output_property(prop_func):
     return prop_func
 
 
-StateT = TypeVar('StateT')
 InputT = TypeVar('InputT')
 OutputT = TypeVar('OutputT')
 
@@ -245,25 +313,34 @@ class DefaultState:
     pass
 
 
-class BaseBaseResource(Generic[StateT, InputT, OutputT]):
-    MAGIC_UUID = 'a81054b2-bb57-4969-b3c5-308fee049e12'
+class BaseBaseResource(Generic[InputT, OutputT]):
 
-    def __init__(self, logger, *args, **kwargs):
+    def __init__(self, input: InputT = None, logger=None):
+
+        self.__input_t = get_args(self.__orig_bases__[0])[0]
+        self.__output_t = get_args(self.__orig_bases__[0])[1]
+
         self.__logger = logger if logger else logging.getLogger(self.full_name)
-        self.__state_t = get_args(self.__orig_bases__[0])[0]
+        self._input: InputT = input
+        self._output: OutputT = self.__output_t()
+
         self.__uuid: UUID | None = None
         self.__path: str = "$"
-        self.__state: StateT = None
-        if self.__state_t == StateT:
-            self.__state_t = DefaultState
-        self.__state: StateT = self.__state_t()
         self.__depends = set()
-        self.__supports = set()
+        self._supports = set()
         self._applied = False
-        self.__plan: 'BasePlan' = None
+        self.__plan: Union['BasePlan', None] = None
 
-    def __post__init__(self):
-        pass
+        self.__scan_input_for_dependencies()
+
+    def __scan_input_for_dependencies(self):
+        def visit(value):
+            if isinstance(value, Connector):
+                for obj in value.root_objs:
+                    self.depends_on(obj)
+            return value
+
+        convert_something_values(self._input, visit)
 
     @property
     def system_tags(self):
@@ -275,12 +352,6 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
             "pdep_root_plan_uuid": str(self.root_plan.uuid),
             "pdep_root_plan_class": str(self.root_plan.class_full_name)
         }
-
-    @property
-    def tags(self):
-        the_tags = copy.deepcopy(self.inputs['tags'])
-        the_tags.update(self.system_tags)
-        return the_tags
 
     @property
     def logger(self):
@@ -298,8 +369,7 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
     def uuid(self):
         return self.__uuid
 
-    @uuid.setter
-    def uuid(self, uuid: UUID):
+    def _set_uuid(self, uuid: UUID):
         self.__uuid = uuid
 
     @property
@@ -325,78 +395,37 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
         self.__plan = plan
 
     @property
-    def inputs(self):
-        return self.__inputs__
+    def input(self):
+        return self._input
 
     @property
-    def state(self) -> StateT:
-        return self.__state
+    @output_property
+    def output(self):
+        return self._output
 
     @property
     def applied(self):
         return self._applied
 
-    def _aws_tags_to_dict(self, aws_tags):
-        tags = {}
-        for pair in aws_tags:
-            tags[pair['Key']] = pair['Value']
-        return tags
-
-    def _dict_to_aws_tags(self, d, additional={}):
-        d = copy.deepcopy(d)
-        d.update(additional)
-        tags = [
-            {
-                'Key': key,
-                'Value': str(value)
-            }
-            for key, value in d.items()
-        ]
-        return tags
-
     def reset_apply_state(self):
         self._applied = False
 
-    def resolve_connector(self, path):
-        raise Exception(f"Only plan have resource path and this is a single resource")
-
     def depends_on(self, res: 'BaseResource'):
         self.__depends.add(res)
-        res.__supports.add(self)
-
-    def resolve_dependencies(self):
-        for connector in self.__connectors__:
-            self.depends_on(connector.root_obj)
-
-    def __resolve_dependent_values_walk(self, parent, key, item):
-        if type(item) == dict:
-            for name, child in item.items():
-                self.__resolve_dependent_values_walk(item, name, child)
-        if type(item) == list:
-            for i, child in enumerate(item):
-                self.__resolve_dependent_values_walk(item, i, child)
-        if type(item) == Connector:
-            parent[key] = item.value
+        res._supports.add(self)
 
     def resolve_dependent_values(self):
-        for name, item in self.__inputs__.items():
-            self.__resolve_dependent_values_walk(self.__inputs__, name, item)
+        def visitor(item):
+            if isinstance(item, Connector):
+                return item.value
+            return item
 
-    def __create_state_dict(self, state, inputs, apply_uuid):
-        json_inputs = {}
-        for key, value in inputs.items():
-            if dataclasses.is_dataclass(value):
-                json_inputs[key] = {
-                    'magic': self.MAGIC_UUID,
-                    'class': f'{value.__class__.__module__}.{value.__class__.__name__}',
-                    'value': value.to_dict()
-                }
-            else:
-                json_inputs[key] = value
+        self._input = convert_something_values(self._input, visitor)
 
+    def _create_state_dict(self, output, input, apply_uuid):
         return {
-            'state': state.to_dict() if state else None,
-            'inputs': json_inputs,
+            'output': output.to_dict(),
+            'input': input.to_dict() if input else None,
             'class': f"{self.__class__.__module__}.{self.__class__.__name__}",
             'path': self.path,
             'uuid': str(self.uuid),
@@ -409,32 +438,22 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
     def mark_destroy(self, resource_manager: ResourceManager, env_inputs, apply_uuid):
         if env_inputs is None:
             return
-        state_dict = self.__create_state_dict(self.state, env_inputs, apply_uuid)
+        state_dict = self._create_state_dict(self._output, env_inputs, apply_uuid)
         resource_manager.mark_destroy(self.uuid, state_dict)
 
-    def __scan_dataclasses(self, inputs):
-        if inputs is None:
-            return None
-        new_inputs = {}
-        for key, value in inputs.items():
-            if type(value) == dict and 'magic' in value and value['magic'] == self.MAGIC_UUID:
-                cls = load_class_from_str(value['class'])
-                obj = cls.from_dict(value['value'])
-                new_inputs[key] = obj
-            else:
-                new_inputs[key] = value
-        return new_inputs
+    def _read_state(self, resource_manager: ResourceManager, from_deleted=False):
+        input = None
+        output = self.__output_t()
 
-    def __read_state(self, resource_manager: ResourceManager, from_deleted=False):
         state_dict = resource_manager.get_state(self.uuid, from_deleted)
-        state_obj = self.__state_t.from_dict(state_dict['state']) if state_dict and state_dict[
-            'state'] else self.__state_t()
-        inputs = state_dict['inputs'] if state_dict else None
-        inputs = self.__scan_dataclasses(inputs)
-        return inputs, state_obj
+        if state_dict:
+            input = self.__input_t.from_dict(state_dict['input']) if state_dict['input'] else None
+            output = self.__output_t.from_dict(state_dict['output'])
+
+        return input, output
 
     @log_func()
-    def apply(self, resource_manager: ResourceManager, provider, dry=False, apply_uuid=None):
+    def apply(self, resource_manager: ResourceManager, provider, dry=False, check_dirft=True, apply_uuid=None):
         if self._applied:
             return
 
@@ -444,21 +463,23 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
             self.logger.info(f"New Apply apply_uuid:{apply_uuid}")
 
         for res in self.__depends:
-            res.apply(resource_manager, provider, dry, apply_uuid=apply_uuid)
+            res.apply(resource_manager, provider, dry, check_dirft, apply_uuid=apply_uuid)
 
         self.logger.debug(f"{self.full_name} apply dry:{dry}")
-        inputs, self.__state = self.__read_state(resource_manager)
+        input, self._output = self._read_state(resource_manager)
         self.resolve_dependent_values()
-        self.do_apply(inputs, resource_manager, provider, apply_uuid=apply_uuid, dry=dry)
-        state_dict = self.__create_state_dict(self.state, self.__inputs__, apply_uuid=apply_uuid)
+        self.do_apply(input, resource_manager, provider, dry, check_dirft, apply_uuid)
+        state_dict = self._create_state_dict(self._output, self._input, apply_uuid=apply_uuid)
         resource_manager.set_state(self.uuid, state_dict)
 
         self._applied = True
+        self.logger.info(f"Apply {self.full_name} Done, output:{self._output}")
+
         if first_apply:
             self.logger.info(f"Apply Finished apply_uuid:{apply_uuid}")
 
     @log_func()
-    def do_apply(self, inputs: Dict[str, Any], resource_manager, provider, apply_uuid, dry):
+    def do_apply(self, inputs: Dict[str, Any], resource_manager, provider, dry, check_drift, apply_uuid):
         pass
 
     @log_func()
@@ -472,16 +493,16 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
             self.logger.info(f"New Destroy apply_uuid:{apply_uuid}")
 
         if not from_deleted:
-            for res in self.__supports:
+            for res in self._supports:
                 if res != self.__plan:
                     res.destroy(resource_manager, provider, dry, apply_uuid=apply_uuid)
-        state = self.__state
-        inputs, self.__state = self.__read_state(resource_manager, from_deleted)
+        org_output = self._output
+        input, self._output = self._read_state(resource_manager, from_deleted)
         self.resolve_dependent_values()
-        self.do_destroy(inputs, resource_manager, provider, apply_uuid, dry=dry)
+        self.do_destroy(input, resource_manager, provider, apply_uuid, dry=dry)
         resource_manager.delete_state(self.uuid, from_deleted)
         if from_deleted:
-            self.__state = state
+            self._output = org_output
         self._applied = True
         if first_apply:
             self.logger.info(f"Destroy Finished")
@@ -491,91 +512,46 @@ class BaseBaseResource(Generic[StateT, InputT, OutputT]):
         pass
 
 
-class BaseResource(BaseBaseResource[StateT, InputT, OutputT]):
-    def __init__(self, logger, input: InputT | Connector | None = None):
-        super().__init__(logger)
-        self.__output_t = get_args(self.__orig_bases__[0])[2]
-        self.__input_t = get_args(self.__orig_bases__[0])[1]
-        self._output = self.__output_t()
-    @property
-    def input(self) -> InputT:
-        return self.input['intput']
-
-    @property
-    @output_property
-    def output(self) -> OutputT:
-        return self._output
-
-    @output.setter
-    def output(self, value: OutputT):
-        self._output = value
+class BaseResource(BaseBaseResource[InputT, OutputT]):
+    pass
 
 
-
-
-class resource:
-    def __init__(self):
-        pass
-
-    def __fill_defaults(self, kwargs):
-        for key, default in self.__defaults.items():
-            if key not in kwargs:
-                kwargs[key] = default
-        return kwargs
-
-    def __call__(self, cls):
-        org_init = cls.__init__
-        self.__defaults = {}
-        sig = inspect.signature(org_init)
-        for k, v in sig.parameters.items():
-            if k not in ['self', 'logger']:
-                self.__defaults[k] = v.default
-
-        def __new__init__(his_self, logger, *args, **kwargs):
-            connectors = []
-            his_self.__inputs__ = kwargs
-            if len(args):
-                raise Exception("No positional args are allowed in resource init ")
-            for name, arg in kwargs.items():
-                if type(arg) == Connector:
-                    connectors.append(arg)
-            his_self.__connectors__ = connectors
-            his_self.__inputs__ = self.__fill_defaults(kwargs)
-            org_init(his_self, logger, *args, **kwargs)
-            his_self.__post__init__()
-
-        assert issubclass(cls, BaseBaseResource)
-        cls.__init__ = __new__init__
-        return cls
-
-
-def sub_uuid(uuid: UUID, name: str):
+def sub_uuid(uuid: UUID, obj: Any, name: str):
     md = md5()
-    md.update(f"{uuid}.{name}".encode('utf-8'))
+    md.update(f"{uuid}.{obj.__class__.__name__}.{name}".encode('utf-8'))
     return UUID(md.hexdigest())
 
 
-class BasePlan(BaseBaseResource[StateT, InputT, OutputT]):
-    def __init__(self, logger, uuid):
-        super().__init__(logger)
+class BasePlan(BaseBaseResource[InputT, OutputT]):
+    def __init__(self, input: InputT, uuid=None, logger=None):
+        super().__init__(input, logger)
         self.__res = DynamicDataContainer()
-        self.uuid = uuid
+        self._set_uuid(uuid)
         self.plan = None
+        self.do_init_resources()
+        if uuid:
+            self._propagate_info_sub_resources()
 
-    def __post__init__(self):
+    def _propagate_info_sub_resources(self):
         for path, value in self.__res.items():
             if isinstance(value, BaseResource):
-                value.uuid = sub_uuid(self.uuid, path)
+                value._set_uuid(sub_uuid(self.uuid, value, path))
                 value.path = path
                 value.plan = self
+            if isinstance(value, BasePlan):
+                value._propagate_info_sub_resources()
+
+    def do_init_resources(self):
+        pass
+
+    @property
+    @plan_output_property
+    def output(self):
+        return self._output
 
     @property
     def resources(self):
         return self.__res
-
-    @log_func()
-    def resolve_connector(self, path):
-        return self.__res.from_path(path)
 
     @log_func()
     def reset_apply_state(self):
@@ -583,14 +559,17 @@ class BasePlan(BaseBaseResource[StateT, InputT, OutputT]):
         for path, res in self.__res.items():
             res.reset_apply_state()
 
-    @log_func()
-    def resolve_dependencies(self):
-        super().resolve_dependencies()
-        for path, res in self.__res.items():
-            res.resolve_dependencies()
+    def _resolve_output_values(self):
+        def visitor(item):
+            if isinstance(item, Connector):
+                return item.value
+            return item
+
+        self._output = convert_something_values(self._output, visitor)
+
 
     @log_func()
-    def apply(self, resource_manager: ResourceManager, provider, dry=False, apply_uuid=None):
+    def apply(self, resource_manager: ResourceManager, provider, dry=False, check_drift=True, apply_uuid=None):
         if self._applied:
             return
 
@@ -599,19 +578,26 @@ class BasePlan(BaseBaseResource[StateT, InputT, OutputT]):
             apply_uuid = uuid.uuid4()
             self.logger.info(f"New Apply apply_uuid:{apply_uuid}")
 
-        self.resolve_dependencies()
+        self.logger.debug(f"{self.full_name} apply dry:{dry}")
+
         self.reset_apply_state()
+        input, _ = self._read_state(resource_manager)
+        self.resolve_dependent_values()
 
         for path, value in self.__res.items():
             if isinstance(value, BaseResource):
-                value.apply(resource_manager, provider, dry, apply_uuid)
-        super().apply(resource_manager, provider, dry, apply_uuid=apply_uuid)
+                value.apply(resource_manager, provider, dry, check_drift, apply_uuid)
+
+        self._resolve_output_values()
+        state_dict = self._create_state_dict(self._output, self._input, apply_uuid=apply_uuid)
+        resource_manager.set_state(self.uuid, state_dict)
+
         if apply_uuid:
             self._clean_to_destroy(resource_manager, provider, dry, apply_uuid)
 
         self._applied = True
         if first_apply:
-            self.logger.info(f"Apply Finished apply_uuid:{apply_uuid}")
+            self.logger.info(f"Apply Finished plan:'{self.full_name}' output:{self.output} apply_uuid:{apply_uuid}")
 
     @log_func()
     def destroy(self, resource_manager: ResourceManager, provider, dry=False, apply_uuid=None):
@@ -623,7 +609,6 @@ class BasePlan(BaseBaseResource[StateT, InputT, OutputT]):
             apply_uuid = uuid.uuid4()
             self.logger.info(f"New Destroy apply_uuid:{apply_uuid}")
 
-        self.resolve_dependencies()
         self.reset_apply_state()
         for path, res in self.__res.items():
             res.destroy(resource_manager, provider, dry, apply_uuid=apply_uuid)
@@ -638,7 +623,55 @@ class BasePlan(BaseBaseResource[StateT, InputT, OutputT]):
         for state in reversed(to_destroy):
             cls = load_class_from_str(state['class'])
             self.logger.info(f"Destroying class:{cls} uuid:{state['uuid']}")
-            res = cls(self.logger, **state['inputs'])
-            res.uuid = state['uuid']
+            res = cls(state['input'])
+            res._set_uuid(state['uuid'])
             res.destroy(resource_manager, provider, dry, from_deleted=True, apply_uuid=apply_uuid)
             self.logger.info(f"Destroying class:{cls} uuid:{state['uuid']} - Done")
+
+
+class SimplifiedResource(BaseResource[InputT, OutputT]):
+
+    @property
+    def create_before_destroy(self):
+        return True
+    @log_func()
+    def do_apply(self, env_inputs: InputT, resource_manager, provider, dry, check_drift, apply_uuid):
+        if env_inputs is None:
+            ret = self.create(provider, apply_uuid, dry)
+            if ret is False:
+                self.do_destroy(self.input, resource_manager, provider, apply_uuid, dry)
+                self.create(provider, apply_uuid, dry)
+            return
+        if env_inputs != self.input or (check_drift and self.is_drifted(provider, dry)):
+            if not self.update(env_inputs, resource_manager, provider, apply_uuid, dry):
+                if self.create_before_destroy:
+                    self.mark_destroy(resource_manager, env_inputs, apply_uuid)
+                else:
+                    self.do_destroy(env_inputs, resource_manager, provider, apply_uuid, dry)
+                ret = self.create(provider, apply_uuid, dry)
+                if ret is False:
+                    self.do_destroy(self.input, resource_manager, provider, apply_uuid, dry)
+                    self.create(provider, apply_uuid, dry)
+
+        else:
+            self.logger.info("nothing to do")
+
+    @log_func()
+    def update(self, env_inputs: InputT, resource_manager, provider, apply_uuid, dry):
+        return False
+
+    @log_func()
+    def do_destroy(self, env_inputs: InputT, resource_manager, provider, apply_uuid, dry):
+        pass
+
+    @log_func()
+    def create(self, provider, apply_uuid, dry):
+        pass
+
+    @log_func()
+    def is_drifted(self, provider, dry):
+        pass
+
+
+class BaseBackbone(BasePlan[InputT, OutputT]):
+    pass

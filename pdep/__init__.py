@@ -1,4 +1,4 @@
-from pdep.plan import BaseResource, Connector, resource, BasePlan, FileResourceManager, zstr, AwsLocalStackProvider
+from pdep.plan import BaseResource, Connector, BasePlan, FileResourceManager, zstr, AwsLocalStackProvider
 from pdep.plan import output_property
 
 __all__ = [

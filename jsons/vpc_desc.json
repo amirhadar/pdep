@@ -1,0 +1,350 @@
+{
+  'Vpcs': [
+    {
+      'CidrBlock': '172.31.0.0/16',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-c0b07a82',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-7540d90d',
+          'CidrBlock': '172.31.0.0/16',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': True,
+      'Tags': []
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-927fd0f8',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-7ab54568',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': '11ad0cf1-85ea-458d-8ab7-6f1287a39729'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-d396152d',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-f39a943f',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': '55883aed-0cd0-486d-89da-7ea9a1ae4081'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-f395021f',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-2afab6e7',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': '63e96e09-79aa-46ac-9c85-cdc0bc50d135'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-2c39b9cc',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-14f3167d',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': 'fca88275-4da1-466c-88e7-c68ce6b8790c'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-8c8e68dd',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-0a68be88',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': 'b488a273-3ba0-4c29-98d4-e74a3227af08'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-72f80dc2',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-63769287',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': []
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-478ea042',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-8ba7978d',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': 'a549c944-616e-4cfd-b1f4-77291194181f'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-0233d8c3',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-4e37396b',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': '7b182f73-76a6-4fbe-b51f-bffcb8595406'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-36533303',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-ce942d03',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': 'e238f1dc-c787-48d8-b79a-ba2f775a7b68'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-8e5773d5',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-54ce1751',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': '52e47c73-36d3-42c6-a7b6-f3218e2bede5'
+        }
+      ]
+    },
+    {
+      'CidrBlock': '10.212.160.0/22',
+      'DhcpOptionsId': 'dopt-7a8b9c2d',
+      'State': 'available',
+      'VpcId': 'vpc-0548fd3a',
+      'OwnerId': '000000000000',
+      'InstanceTenancy': 'default',
+      'Ipv6CidrBlockAssociationSet': [],
+      'CidrBlockAssociationSet': [
+        {
+          'AssociationId': 'vpc-cidr-assoc-5bd3c5cd',
+          'CidrBlock': '10.212.160.0/22',
+          'CidrBlockState': {
+            'State': 'associated'
+          }
+        }
+      ],
+      'IsDefault': False,
+      'Tags': [
+        {
+          'Key': 'mytag',
+          'Value': 'mytagvalue'
+        },
+        {
+          'Key': 'apply_uuid',
+          'Value': '273c9b77-d6cf-4476-8b7e-dce50c62ce64'
+        }
+      ]
+    }
+  ],
+  'ResponseMetadata': {
+    'RequestId': 'XA1QXKSV9QNV1Y5MA2U2Q0PTB5LDDL2Y2ZDISNA9IJL61DAW2HU8',
+    'HTTPStatusCode': 200,
+    'HTTPHeaders': {
+      'content-type': 'text/xml',
+      'content-length': '7703',
+      'connection': 'close',
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'HEAD,GET,PUT,POST,DELETE,OPTIONS,PATCH',
+      'access-control-allow-headers': 'authorization,cache-control,content-length,content-md5,content-type,etag,location,x-amz-acl,x-amz-content-sha256,x-amz-date,x-amz-request-id,x-amz-security-token,x-amz-tagging,x-amz-target,x-amz-user-agent,x-amz-version-id,x-amzn-requestid,x-localstack-target,amz-sdk-invocation-id,amz-sdk-request',
+      'access-control-expose-headers': 'etag,x-amz-version-id',
+      'date': 'Tue, 01 Nov 2022 12:48:00 GMT',
+      'server': 'hypercorn-h11'
+    },
+    'RetryAttempts': 0
+  }
+}

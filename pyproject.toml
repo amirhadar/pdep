@@ -11,6 +11,7 @@ pydantic = "^1.10.2"
 jsonpickle = "^2.2.0"
 awscli-local = "^0.20"
 logdecorator = "^2.4"
+ipcalc = "^1.99.0"
 
 [tool.poetry.dev-dependencies]
 
