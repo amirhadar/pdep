@@ -96,5 +96,6 @@ if __name__ == "__main__":
         tags={"mytag": "mytagvalue"}
     ), UUID('a81054b2-bb57-4969-b3c5-308fee049e02'))
 
+    rm.select("/")
     bb.apply(rm, provider, dry=False, check_drift=True)
     pprint(bb.output.to_dict())
