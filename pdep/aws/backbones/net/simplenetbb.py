@@ -36,7 +36,7 @@ class SimpleNetBB(BaseBackbone[BasicNetBBInput, BasicNetBBOutput]):
             vpc_id=self.resources.main_vpc.output.vpc_id
         ))
 
-        self.resources.subnets = [
+        self.resources.subnet_ids = [
             Subnet(SubnetInput(
                 vpc_id=self.resources.main_vpc.output.vpc_id,
                 cidr_block=SubnetCidrCalculator(self.resources.main_vpc.output.cidr_block, self.input.subnets_num, i),
@@ -49,7 +49,7 @@ class SimpleNetBB(BaseBackbone[BasicNetBBInput, BasicNetBBOutput]):
                 route_table_id=self.resources.rout_table.output.rout_table_id,
                 subnet_id=subnet.output.subnet_id
             ))
-            for subnet in self.resources.subnets
+            for subnet in self.resources.subnet_ids
         ]
 
         self.resources.security_group = SecurityGroup(SecurityGroupInput(
@@ -73,8 +73,9 @@ class SimpleNetBB(BaseBackbone[BasicNetBBInput, BasicNetBBOutput]):
             cidr_blocks=["0.0.0.0/0"]
         ))
 
-        subnets = [subnet.output for subnet in self.resources.subnets]
+        subnets = [subnet.output for subnet in self.resources.subnet_ids]
         self._output = BasicNetBBOutput(
+            region=self.input.region,
             vpc=self.resources.main_vpc.output,
             route_table=self.resources.rout_table.output,
             security_group=self.resources.security_group.output,
@@ -84,18 +85,3 @@ class SimpleNetBB(BaseBackbone[BasicNetBBInput, BasicNetBBOutput]):
             db_subnets=subnets,
         )
 
-
-if __name__ == "__main__":
-    setup_logging(console_level=log_func.ABOVE_DEBUG)
-    rm = FileResourceManager("state.json")
-    provider = AwsLocalStackProvider(None)
-    bb = SimpleNetBB(BasicNetBBInput(
-        vpc_cidr_block="10.212.160.0/22",
-        subnets_num=2,
-        region="us-east-1",
-        tags={"mytag": "mytagvalue"}
-    ), UUID('a81054b2-bb57-4969-b3c5-308fee049e02'))
-
-    rm.select("/")
-    bb.apply(rm, provider, dry=False, check_drift=True)
-    pprint(bb.output.to_dict())

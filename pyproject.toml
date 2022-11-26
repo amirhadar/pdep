@@ -12,6 +12,7 @@ jsonpickle = "^2.2.0"
 awscli-local = "^0.20"
 logdecorator = "^2.4"
 ipcalc = "^1.99.0"
+appdirs = "^1.4.4"
 
 [tool.poetry.dev-dependencies]
 

@@ -8,7 +8,6 @@ import logging
 from pathlib import Path
 
 
-
 class DynamicDataContainer:
 
     def __init__(self, parent=None, name="$"):
@@ -242,3 +241,7 @@ def do_with_timeout(predicate, timeout, sleep=5):
         if time.time() - start_t > timeout:
             raise Exception(f"timeout")
         time.sleep(sleep)
+
+
+def class_full_name(cls):
+    return f"{cls.__module__}.{cls.__name__}"

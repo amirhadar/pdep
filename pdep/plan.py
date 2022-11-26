@@ -3,23 +3,29 @@ import dataclasses
 import importlib
 import inspect
 import logging
+import os
 import uuid
 from dataclasses import dataclass
 from functools import wraps
 import json
 from hashlib import md5
 from pathlib import Path
-from typing import TypeVar, Generic, get_args, Union, Dict, Any, List
+from typing import TypeVar, Generic, get_args, Union, Dict, Any, List, Type
 from uuid import UUID
 
+import appdirs
 import boto3
 from dataclasses_json import dataclass_json
 
 from pdep.inter import implements
 from pdep.utils import DynamicDataContainer, dict_to_class, log_func, load_class_from_str, convert_something_values, \
-    unused
+    unused, class_full_name
 
 zstr = Union[str, None, Any]
+
+
+class OutputTypeNotFound(Exception):
+    pass
 
 
 class ResourceManager:
@@ -39,6 +45,16 @@ class ResourceManager:
     def get_to_destroy(self) -> List[Dict[str, Any]]:
         pass
 
+    def get_output(self, cls: Type):
+        pass
+
+    @property
+    def folder(self) -> str:
+        pass
+
+    @folder.setter
+    def folder(self, folder):
+        pass
 
 @implements(ResourceManager)
 class FileResourceManager(ResourceManager):
@@ -46,7 +62,13 @@ class FileResourceManager(ResourceManager):
     def __init__(self, path: str | Path, logger=None):
         self.__logger = logger if logger else logging.getLogger(self.full_name)
         self.__path = Path(path)
+        if not self.__path.is_absolute():
+            self.__path = Path(appdirs.user_data_dir("pdep", "msops")).joinpath(path)
+        os.makedirs(self.__path.parent, exist_ok=True)
+
+
         self.__state = {"to_destroy": []}
+        self.__folder = "/"
 
     @property
     def logger(self):
@@ -55,6 +77,16 @@ class FileResourceManager(ResourceManager):
     @property
     def full_name(self):
         return f"{self.__class__.__module__}.{self.__class__.__name__}({id(self)})"
+
+    @property
+    def folder(self) -> str:
+        return self.__folder
+
+    @folder.setter
+    def folder(self, folder):
+        self.__folder = folder
+
+
 
     @log_func()
     def get_state(self, uuid: UUID | str, from_delete=False) -> dict | None:
@@ -79,6 +111,7 @@ class FileResourceManager(ResourceManager):
                 self.__state = json.load(fp)
                 fp.close()
 
+        state['folder'] = self.__folder
         self.__state[str(uuid)] = state
 
         with self.__path.open('w') as fp:
@@ -121,6 +154,21 @@ class FileResourceManager(ResourceManager):
 
         return copy.deepcopy(self.__state['to_destroy'])
 
+    def get_output(self, cls: Type):
+        if self.__path.exists():
+            with self.__path.open('r') as fp:
+                self.__state = json.load(fp)
+                fp.close()
+
+        cls_fullname = class_full_name(cls)
+        for uuid, state in self.__state.items():
+            if uuid == 'to_destroy':
+                continue
+            if self.__folder.startswith(state['folder']) and state['output_type'] == cls_fullname:
+                return cls.from_dict(state['output'])
+        else:
+            raise OutputTypeNotFound()
+
 
 class AwsLocalStackProvider:
     def __init__(self, logger=None):
@@ -154,6 +202,9 @@ class AwsLocalStackProvider:
             "ssm": "http://localhost:4566",
             "stepfunctions": "http://localhost:4566",
             "sts": "http://localhost:4566",
+            "ecs": "http://localhost:4566",
+            "events": "http://localhost:4566",
+            "elbv2": "http://localhost:4566",
         }
 
     @property
@@ -425,7 +476,9 @@ class BaseBaseResource(Generic[InputT, OutputT]):
     def _create_state_dict(self, output, input, apply_uuid):
         return {
             'output': output.to_dict(),
+            'output_type': class_full_name(output.__class__),
             'input': input.to_dict() if input else None,
+            'input_type': class_full_name(input.__class__) if input else None,
             'class': f"{self.__class__.__module__}.{self.__class__.__name__}",
             'path': self.path,
             'uuid': str(self.uuid),
@@ -567,7 +620,6 @@ class BasePlan(BaseBaseResource[InputT, OutputT]):
 
         self._output = convert_something_values(self._output, visitor)
 
-
     @log_func()
     def apply(self, resource_manager: ResourceManager, provider, dry=False, check_drift=True, apply_uuid=None):
         if self._applied:
@@ -634,6 +686,7 @@ class SimplifiedResource(BaseResource[InputT, OutputT]):
     @property
     def create_before_destroy(self):
         return True
+
     @log_func()
     def do_apply(self, env_inputs: InputT, resource_manager, provider, dry, check_drift, apply_uuid):
         if env_inputs is None:

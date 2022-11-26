@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List
+
 import botocore.exceptions
 from dataclasses_json import dataclass_json
+
 from pdep import zstr
-from pdep.plan import SimplifiedResource, BaseResource, InputT, OutputT
+from pdep.plan import SimplifiedResource
 from pdep.utils import log_func, _aws_tags_to_dict, _dict_to_aws_tags, do_with_timeout
 
 

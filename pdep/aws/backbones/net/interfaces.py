@@ -18,6 +18,7 @@ class BasicNetBBInput:
 @dataclass_json
 @dataclass
 class BasicNetBBOutput:
+    region: str = None
     vpc: VpcOutput = field(default_factory=VpcOutput)
     route_table: RouteTableOutput = field(default_factory=RouteTableOutput)
     security_group: SecurityGroupOutput = field(default_factory=SecurityGroupOutput)
